@@ -1,0 +1,162 @@
+---
+title: "The Health and Economic Impact of Natural Disasters"
+author: "Van Wyk Burnett"
+date: "30 March 2020"
+output: html_document
+---
+
+##Synopsis
+This is an analysis of the NOAA Storm Events Data ranging from 1950 to 2011. In this project I aggregate the data and look at the total number of injuries, fatalities, and amount of damage (in dollars) caused by each of the natural events. Overall, Floods are responsible for the most economic damage, but Tornadoes cause the most injuries and fatalities.
+
+
+##Data Processing
+#Importing Data
+This section will show how data was loaded into R from the raw file "redata_data_StormDate.csv.bz2".
+
+```{r Load Data}
+filename <- "repdata_data_StormData.csv.bz2"
+
+#read compressed file directly
+stormdata <- read.csv(bzfile(filename))
+
+```
+
+#Extracting Data
+Not all the data in the original file is required for this analysis. I will now extract only the neccesary data to perform both the health impact analysis and the economic impact analysis.
+
+```{r extracting data}
+mydata <- stormdata[c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")]
+head(mydata)
+```
+
+#Data transformations
+The data include a property damage exponential and a crop damage exponential. The eponential column include an x value that is used to calculate the total damage in the following way PROPDMG * 10^x. The exponential columns are also inconsistent and include letters that will now be transformed into valid x values.
+
+```{r identify inaccurate exponentials}
+unique(mydata$PROPDMGEXP)
+unique(mydata$CROPDMGEXP)
+
+```
+
+The next code chuck will create a two new columns (one for property and one for crop) that will include the correct exponential values.
+```{r data transformation}
+mydata$PROPEXP[mydata$PROPDMGEXP == ""] <- "0"
+mydata$PROPEXP[mydata$PROPDMGEXP == "+"] <- "0"
+mydata$PROPEXP[mydata$PROPDMGEXP == "-"] <- "0"
+mydata$PROPEXP[mydata$PROPDMGEXP == "?"] <- "0"
+
+mydata$CROPEXP[mydata$CROPDMGEXP == ""] <- "0"
+mydata$CROPEXP[mydata$CROPDMGEXP == "+"] <- "0"
+mydata$CROPEXP[mydata$CROPDMGEXP == "-"] <- "0"
+mydata$CROPEXP[mydata$CROPDMGEXP == "?"] <- "0"
+
+
+mydata$PROPEXP[mydata$PROPDMGEXP == "h"] <- 2
+mydata$PROPEXP[mydata$PROPDMGEXP == "H"] <- 2
+
+mydata$PROPEXP[mydata$PROPDMGEXP == "K"] <- 3
+mydata$CROPEXP[mydata$CROPDMGEXP == "K"] <- 3
+mydata$CROPEXP[mydata$CROPDMGEXP == "k"] <- 3
+
+mydata$PROPEXP[mydata$PROPDMGEXP == "m"] <- 6
+mydata$PROPEXP[mydata$PROPDMGEXP == "M"] <- 6
+mydata$CROPEXP[mydata$CROPDMGEXP == "m"] <- 6
+mydata$CROPEXP[mydata$CROPDMGEXP == "M"] <- 6
+
+mydata$PROPEXP[mydata$PROPDMGEXP == "B"] <- 9
+mydata$CROPEXP[mydata$CROPDMGEXP == "B"] <- 9
+
+mydata$PROPEXP[mydata$PROPDMGEXP == "0"] <- 0
+mydata$PROPEXP[mydata$PROPDMGEXP == "1"] <- 1
+mydata$PROPEXP[mydata$PROPDMGEXP == "2"] <- 2
+mydata$PROPEXP[mydata$PROPDMGEXP == "3"] <- 3
+mydata$PROPEXP[mydata$PROPDMGEXP == "4"] <- 4
+mydata$PROPEXP[mydata$PROPDMGEXP == "5"] <- 5
+mydata$PROPEXP[mydata$PROPDMGEXP == "6"] <- 6
+mydata$PROPEXP[mydata$PROPDMGEXP == "7"] <- 7
+mydata$PROPEXP[mydata$PROPDMGEXP == "8"] <- 8
+mydata$PROPEXP[mydata$PROPDMGEXP == "9"] <- 9
+
+mydata$CROPEXP[mydata$CROPDMGEXP == "0"] <- 0
+mydata$CROPEXP[mydata$CROPDMGEXP == "1"] <- 1
+mydata$CROPEXP[mydata$CROPDMGEXP == "2"] <- 2
+mydata$CROPEXP[mydata$CROPDMGEXP == "3"] <- 3
+mydata$CROPEXP[mydata$CROPDMGEXP == "4"] <- 4
+mydata$CROPEXP[mydata$CROPDMGEXP == "5"] <- 5
+mydata$CROPEXP[mydata$CROPDMGEXP == "6"] <- 6
+mydata$CROPEXP[mydata$CROPDMGEXP == "7"] <- 7
+mydata$CROPEXP[mydata$CROPDMGEXP == "8"] <- 8
+mydata$CROPEXP[mydata$CROPDMGEXP == "9"] <- 9
+```
+
+#Checing new Exponential values
+Now I will check if all my exponential values are valid numbers.
+```{r check replacements}
+unique(mydata$PROPEXP)
+unique(mydata$CROPEXP)
+
+```
+
+#Calculating PROP & CROP Damage Values
+Two new columns will be added that will show the damage cost. The cost is the damage value multiplies by the 10^x (where x is the exponential value).
+```{r Val}
+mydata$PROPVAL <- (10^(as.numeric(mydata$PROPEXP)))*mydata$PROPDMG
+mydata$CROPVAL <- (10^(as.numeric(mydata$CROPEXP)))*mydata$CROPDMG
+mydata[is.na(mydata$PROPVAL), "PROPVAL"] <- 0
+mydata[is.na(mydata$CROPVAL), "CROPVAL"] <- 0
+```
+
+#Health Impact Analysis
+This section will identify how many falatilies and injuries each natural event are responsible for.
+
+First, I will sum the data per event type.
+```{r HEALTH SUM}
+fatal <- aggregate(FATALITIES ~ EVTYPE, mydata, FUN = sum)
+injury <- aggregate(INJURIES ~ EVTYPE, mydata, FUN = sum)
+```
+
+Then I will create two bar plots to show the top 5 of events with the most fatalities and injuries.
+```{r HEALTH graph}
+
+fatal <- fatal[order(fatal$FATALITIES, decreasing = TRUE), ][1:5,]
+injury <- injury[order(injury$INJURIES, decreasing = TRUE), ][1:5,]
+
+par(mfrow = c(1, 2), mar = c(12, 4, 3, 2), mgp = c(3, 1, 0), cex = 0.8)
+
+library(ggplot2)
+ggplot(fatal, aes(EVTYPE, y = FATALITIES)) + geom_bar(stat = "identity") + xlab("Event Type") + ylab("Number of Fatalities") + ggtitle("Fatalities by Event type") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(injury, aes(EVTYPE, y = INJURIES)) + geom_bar(stat = "identity") + xlab("Event Type") + ylab("Number of Injuries") + ggtitle("Injuries by Event type") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+It is clear that Tornado's is the cause for the most fatalities and the most injuries.
+
+#Economic Impact Analysis
+This section will show the events that caused the most damage to property and crop.
+
+First, I will sum the total amount of damages per event.
+```{r ECONOMIC}
+prop <- aggregate(PROPVAL ~ EVTYPE, mydata, FUN = sum)
+crop <- aggregate(CROPVAL ~ EVTYPE, mydata, FUN = sum)
+```
+
+Then I will create two bar charts that will show the damages per event.
+```{r ECONIMIC graph}
+
+prop <- prop[order(prop$PROPVAL, decreasing = TRUE), ][1:5,]
+crop <- crop[order(crop$CROPVAL, decreasing = TRUE), ][1:5,]
+
+par(mfrow = c(1, 2), mar = c(12, 4, 3, 2), mgp = c(3, 1, 0), cex = 0.8)
+
+library(ggplot2)
+ggplot(prop, aes(EVTYPE, y = PROPVAL)) + geom_bar(stat = "identity") + xlab("Event Type") + ylab("Damage Cost in Dollars") + ggtitle("Property Damage by Event type") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(crop, aes(EVTYPE, y = CROPVAL)) + geom_bar(stat = "identity") + xlab("Event Type") + ylab("Damage Cost in Dollars") + ggtitle("Crop Damage by Event type") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+From the graphs we can see that Floods caused the most damage to Property and that Drought caused most damage to Crop.
+
+
+##Results
+It is clear from the above analysis that Tornados are most harmful with respect to population health.
+The two events that have the greatest consequences to economic indicators (Property and Crop) are Floods and Droughts.
