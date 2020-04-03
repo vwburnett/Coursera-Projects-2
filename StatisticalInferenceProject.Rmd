@@ -1,0 +1,126 @@
+---
+title: "Statistical Inference Project"
+author: "Van Wyk Burnett"
+date: "02 April 2020"
+output: pdf_document
+---
+
+## Part 1: Simulation Exercise
+
+```{r load libraries, cache=FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+```
+
+#Data Processing
+First set the varianes to the given values.
+Also set the seed to that the similation can be done by another with the same results.
+
+```{r data processing}
+set.seed(234)
+lambda <- 0.2
+n <- 40  #number of exponentials (sample size)
+nosim <- 1000 #number of simulatoins
+```
+
+Next, create a matrix of 1000 simulations. Each time drawing 40 samples from the exponential distribution.
+
+```{r create matrix}
+mymatrix <- matrix(rexp(n * nosim, rate = lambda), nosim)
+```
+
+Calculate the mean for each simulation.
+
+```{r means}
+means <- rowMeans(mymatrix)
+```
+
+#Exploratory data analysis
+Plot the simulation means.
+
+```{r plot means}
+hist(means, col="lightblue", xlab = "Mean value", main = "Histogram of 1000 simulation means")
+```
+
+#Mean Comparison
+Question 1: Show the sample mean and compare it to the theoretical mean on the distribution.
+
+```{r mean comparison}
+#mean of sample means
+smean <- mean(means)
+smean
+#theoretical mean
+tmean <- 1/lambda
+tmean
+#difference
+smean - tmean
+```
+
+The mean of the sample mean is very close to the theoretical mean, with only 0.001573 difference.
+
+#Variance Comparison
+Question 2: Show how variable the sample is (via variance) and compare it to the theoretical variance of the distribution.
+
+```{r variance comparison}
+#Vaiance of sample mean
+sVar <- var(means)
+sVar
+#Theoretical variance
+tVar <- (1/lambda)^2/(n)
+tVar
+#Difference
+sVar-tVar
+```
+
+The sample variance and the theretical variance is very close to each other, with a difference of only 0.038150.
+
+Standard Deviation
+```{r stdev}
+#sample standard deviation
+sstdev <- sd(means)
+sstdev
+#theoretical standard deviation
+tstdev <- 1/(lambda * sqrt(n))
+tstdev
+```
+
+#Camparing to the normal distribution
+Question 3: Show that the distribution is approximately normal.
+
+```{r histogram}
+mydata <- data.frame(means)
+p <- ggplot(mydata, aes(x = means))
+p <- p + geom_histogram(aes(y=..density..), colour = "black", fill = "lightblue")
+p <- p + geom_vline(aes(xintercept = smean, colour="red"))
+p <- p + geom_vline(aes(xintercept = tmean, colour="blue"))
+p <- p + stat_function(fun = dnorm, args = list(mean = smean, sd = sstdev), color = "red", size = 1.0)
+p <- p + stat_function(fun = dnorm, args = list(mean = tmean, sd = tstdev), color = "blue", size = 1.0)
+p <- p + labs(title = "The distribution of means of 40 samples", x = "Mean Value", y = "Density")
+p
+
+```
+
+The theoretical mean and sample mean is so close that the lines overlap, the red vertical line show the mean of means value.
+The red curve is the cuve formed by the sample mean and sandard deviation.
+The blue curve represents the normal curve formed by the theoretical mean and standard deviation.
+
+It is clear from this graph that the distribution of means of 40 exponential distributions is very close to the normal distribution. 
+
+#Confidence Intervals
+The sample confidenced interval.
+```{r scI}
+sCI <- smean + c(-1,1)*1.96*sstdev/sqrt(n)
+sCI
+```
+
+The theoretical confidence interval.
+```{r tCI}
+tCI <- tmean + c(-1,1)*1.96*tstdev/sqrt(n)
+tCI
+```
+
+The sample and theoretical confidence interval is very close to each other.
+
+#Conclusion
+It is clear from the evidence shown in the above analysis that the distribution of means of 40 exponential distributions is approximately normal.

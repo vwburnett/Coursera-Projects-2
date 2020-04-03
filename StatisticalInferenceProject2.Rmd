@@ -1,0 +1,102 @@
+---
+title: "StatisticalInferenceProject2"
+author: "Van Wyk Burnett"
+date: "03 April 2020"
+output: pdf_document
+---
+
+##Part 2: Basic Inferential Data Analysis
+
+
+
+#Data Processing
+In this section I will load the data and perform some basic exploratory data analysis.
+```{r setup, cache=TRUE}
+#load data
+library(datasets)
+library(ggplot2)
+data("ToothGrowth")
+#look at data structure
+str(ToothGrowth)
+```
+
+```{r head}
+#look at head of the data
+head(ToothGrowth)
+```
+
+Investigate if column "dose" should rather be a factor variable.
+```{r dose}
+unique(ToothGrowth$dose)
+```
+
+Convert column "dose" to factor variable.
+```{r dose to factor}
+#convert dose to factor
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+#look at new data structure
+str(ToothGrowth)
+```
+
+#Summary of data
+Basic summary
+```{r summary}
+summary(ToothGrowth)
+```
+
+Box plot to visualise the data summary.
+```{r boxplot}
+p <- ggplot(data = ToothGrowth, aes(x=dose, y=len, group=dose)) + geom_boxplot(aes(fill=dose)) +ggtitle("Tooth growth by dosage") 
+p <- p + xlab("dose in mg") + ylab("tooth length")
+p
+```
+
+```{r boxplot2}
+p <- ggplot(data = ToothGrowth, aes(x=dose, y=len, group=supp)) + geom_boxplot(aes(fill=supp)) +ggtitle("Tooth growth by suppliment type") 
+p <- p + xlab("Supplement Type") + ylab("tooth length")
+p
+```
+
+#Hypothesis Test
+This test will determine if the delivery mode has an influence on the tooth growth.
+
+The null hypothesis:
+H0: The delivery mode of Vitamin C does not have any influence on the tooth growth
+```{r ttest}
+t.test(len ~ supp, data = ToothGrowth)
+```
+
+The p-value of 0.06 at a significance level of 0.05 (alpha = 0.05) indicates that we do not reject the null hypothesis.
+The confidence interval include 0, so the test is not significant.
+
+The next test will test the influence of the dose on the tooth length.
+There are three dose levels, thus subgroups will be neccesary to perform the t.test (can only use two levels per test).
+
+Creating subgroups
+```{r groups}
+group1 <- subset(ToothGrowth, dose %in% c(0.5,1.0))
+group2 <- subset(ToothGrowth, dose %in% c(0.5,2.0))
+group3 <- subset(ToothGrowth, dose %in% c(1.0,2.0))
+```
+
+```{r ttest2 group1}
+t.test(len ~ dose, data = group1)
+```
+
+```{r ttest2 group2}
+t.test(len ~ dose, data = group2)
+```
+
+```{r ttest2 group3}
+t.test(len ~ dose, data = group3)
+```
+
+For all three subgroups the t.test results in a p-value of less that 0.05 and for none of the tests does the confidence interval include zero, thus we can reject the null hypothesis and conclude that an increasing dose level leads to an increase in tooth lenght. 
+
+#Assumptions
+1.  Members of the sample population (the 60 guinea pigs) are representative of the entire
+    population of guinea pigs. This assumption allows us to generalize the results.
+
+#Conclusion
+The dose of Vitamin C does influence the tooth growth of Guinea pigs.
+THe delivery mode (Ascorbic Acid or Orange Juice) does not have an impact on the growth of their teeth.
